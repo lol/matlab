@@ -1,0 +1,4 @@
+1) To convert a GDF file to MAT, gdf2mat('filename_1',[1 2]) 
+2) Then ov_classifier('filename_1','filename_2')
+
+Extensions are not needed.
