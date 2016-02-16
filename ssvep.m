@@ -90,21 +90,34 @@ discardBuffer = (samplesTrain - (epochTime * fs)) / (epochOverlap * fs);        
 
 feature = [];
 
-% only for Class 1 currently. Can be repeated for other classes ideally
-% after dividing classSignal into 3 different matrices.
-
-for i = 1:size(stimCoordinate,1)
-    tempInner = [];
-    for j = 1:numChannels
-        mat = buffer(classSignal((i - 1) * samplesTrain + 1: i * samplesTrain, j), epochTime * fs, ceil(overlap_factor * epochTime * fs));
-        mat = mat(:, size(mat,2) - discardBuffer:end);              % buffer introduces some zero padding in the beginning
-        %mat = mat .^ 2;
-        %meanMat = mean(mat);
-        %logMat = log(1 + meanMat);
-        tempInner = [tempInner; log(1 + mean(mat .^ 2))];
+for k = 1:size(classSignal,1)/numClasses:size(classSignal,1)
+    for i = 1:size(stimCoordinate,1)
+       tempInner = [];
+       for j = 1:numChannels
+            mat = buffer(classSignal((i - 1) * samplesTrain + 1 + (k-1):i * samplesTrain + (k-1), j), epochTime * fs, ceil(overlap_factor * epochTime * fs));
+            mat = mat(:, size(mat,2) - discardBuffer:end);              % buffer introduces some zero padding in the beginning
+            tempInner = [tempInner; log(1 + mean(mat .^ 2))];
+       end
+       feature = [feature; tempInner'];
     end
-    feature = [temp; tempInner'];
 end
+
+unfeature = [];
+
+for k = 1:size(classSignal,1)/numClasses:size(classSignal,1)
+    for i = 1:numClasses * size(stimCoordinate,1)
+       tempInner = [];
+       for j = 1:numChannels
+            mat = buffer(nonclassSignal((i - 1) * samplesTrain + 1 + (k-1):i * samplesTrain + (k-1), j), epochTime * fs, ceil(overlap_factor * epochTime * fs));
+            mat = mat(:, size(mat,2) - discardBuffer:end);              % buffer introduces some zero padding in the beginning
+            tempInner = [tempInner; log(1 + mean(mat .^ 2))];
+       end
+       unfeature = [unfeature; tempInner'];
+    end
+end
+
+% Divide feature and unfeature into 3 sets of class and non-class feature
+% vectors to train classifier.
 
 % for verification
 % x = [];
