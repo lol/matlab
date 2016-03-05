@@ -111,11 +111,12 @@ label = label';
 
 
 order = unique(label);
-partObj = cvpartition(label, 'k', 10); %10-fold
 
-f = @(xtr, ytr, xte, yte)confusionmat(yte, classify(xte, xtr, ytr), 'order', order);
 
 for i = 1:numClasses
+    partObj = cvpartition(label, 'k', 10); %10-fold
+    f = @(xtr, ytr, xte, yte)confusionmat(yte, classify(xte, xtr, ytr), 'order', order);
+    
     fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
     disp('Resubstitution ');
     
@@ -139,4 +140,3 @@ for i = 1:numClasses
     confMatK = reshape(sum(confMatKi), 2, 2)
     percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
 end
-
