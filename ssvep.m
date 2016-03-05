@@ -2,7 +2,8 @@ clc;
 clear all;
 
 freqBands = [10, 15, 12];
-[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
+[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 fs = h.SampleRate;
 numChannels = h.NS;
 s = s(:, 1:numChannels); % selection of channels
@@ -11,7 +12,7 @@ stimCodes = [33024, 33025, 33026, 33027];
 numClasses = size(stimCodes, 2) - 1;
 
 % Samples considered for training. From 1.000 to 7.999 sec.
-flickerStart = 1;
+flickerStart = 1;   % default = 1
 flickerEnd = 8;     % could also be called last offset
 samplesTrain = (flickerEnd - flickerStart) * fs; % 1750 samples @ fs = 250 Hz
 startOffset = flickerStart * fs;
@@ -57,6 +58,7 @@ end
 % concatenated one after the other.
 % nonClass signal is a 126000 * 6 matrix. Three 42000 * 6 matrices are
 % concatenated one after the other.
+% The above dimensions are only true if the window is from 1 to 8 seconds.
 
 epochTime = 0.5;            % in seconds
 epochOverlap = 0.1;         % in seconds
@@ -65,8 +67,6 @@ overlap_factor = (epochTime - epochOverlap) / epochTime;
 % buffer introduces some zero padding in the beginning, which needs to be
 % discarded
 discardBuffer = (samplesTrain - (epochTime * fs)) / (epochOverlap * fs);
-
-% mat = buffer(classSignal(1:1750,1), epochTime * fs, ceil(overlap_factor * epochTime * fs));
 
 feature = [];
 
@@ -98,3 +98,45 @@ end
 
 % Divide feature and unfeature into 3 sets of class and non-class feature
 % vectors to train classifier.
+
+%transform into 3D.
+%feature_ = permute(reshape(feature', [size(feature, 2), size(feature, 1) / numClasses, numClasses]), [2, 1, 3]);
+%unfeature_ = permute(reshape(unfeature', [size(unfeature, 2), size(unfeature, 1) / numClasses, numClasses]), [2, 1, 3]);
+
+%data is concat of 'feature_' and 'unfeature_'. unfeature_ below feature_
+data = [permute(reshape(feature', [size(feature, 2), size(feature, 1) / numClasses, numClasses]), [2, 1, 3]); permute(reshape(unfeature', [size(unfeature, 2), size(unfeature, 1) / numClasses, numClasses]), [2, 1, 3]);];
+label(1:size(feature, 1)/numClasses) = 1;
+label(size(feature, 1)/numClasses + 1 : size(feature, 1)/numClasses + size(unfeature, 1)/numClasses) = 2;
+label = label';
+
+
+order = unique(label);
+partObj = cvpartition(label, 'k', 10); %10-fold
+
+f = @(xtr, ytr, xte, yte)confusionmat(yte, classify(xte, xtr, ytr), 'order', order);
+
+for i = 1:numClasses
+    fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
+    disp('Resubstitution ');
+    
+    [predict, error] = classify(data(:, :, i), data(:, :, i), label);
+    confMat = confusionmat(label, predict)
+    perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
+    
+    disp('KFold Cross Validation');
+    confMatKi = crossval(f, data, label, 'partition', partObj);
+    
+    for j = 1:size(confMatKi, 1)
+        tempMat = reshape(confMatKi(j, :), 2, 2);
+        accK(j) = 100* sum(diag(tempMat)) / sum(sum(tempMat)); % sum of diagonal / total
+    end
+    
+    disp('KFold Accuracies %: ');
+    disp(accK);
+    disp('Sigma: ');
+    disp(sqrt(var(accK)));
+            
+    confMatK = reshape(sum(confMatKi), 2, 2)
+    percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
+end
+
