@@ -118,24 +118,24 @@ for i = 1:numClasses
     f = @(xtr, ytr, xte, yte)confusionmat(yte, classify(xte, xtr, ytr), 'order', order);
     
     fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
-    disp('Resubstitution ');
+    fprintf('\n--- Resubstitution ---\n');
     
     [predict, error] = classify(data(:, :, i), data(:, :, i), label);
     confMat = confusionmat(label, predict)
     perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
-    
-    disp('KFold Cross Validation');
-    confMatKi = crossval(f, data, label, 'partition', partObj);
+        
+    fprintf('\n--- KFold Cross Validation ---\n\n');
+    confMatKi = crossval(f, data, label, 'partition', partObj); % each row can be transformed into a confusionmatrix by using reshape
     
     for j = 1:size(confMatKi, 1)
         tempMat = reshape(confMatKi(j, :), 2, 2);
         accK(j) = 100* sum(diag(tempMat)) / sum(sum(tempMat)); % sum of diagonal / total
     end
     
-    disp('KFold Accuracies %: ');
-    disp(accK);
-    disp('Sigma: ');
-    disp(sqrt(var(accK)));
+    fprintf('KFold Accuracies in perc:\n');
+    disp(accK)
+    sigmaAccK = sqrt(var(accK));
+    fprintf('Standard Deviation of KFold Accuracies: %f\n', sigmaAccK);
             
     confMatK = reshape(sum(confMatKi), 2, 2)
     percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
