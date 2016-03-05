@@ -1,0 +1,103 @@
+ssvep
+=*=*=*=*=*=*=*=*= Class 1 =*=*=*=*=*=*=*=*=
+
+--- Resubstitution ---
+
+confMat =
+
+   234    54
+    81   783
+
+
+perc =
+
+   81.2500   18.7500
+    9.3750   90.6250
+
+
+--- KFold Cross Validation ---
+
+KFold Accuracies in perc:
+   86.9565   93.1034   90.5172   92.1739   92.1739   93.0435   94.7826   95.6522   93.0435   86.0870
+
+Standard Deviation of KFold Accuracies: 3.100684
+
+confMatK =
+
+   244    44
+    51   813
+
+
+percK =
+
+   84.7222   15.2778
+    5.9028   94.0972
+
+=*=*=*=*=*=*=*=*= Class 2 =*=*=*=*=*=*=*=*=
+
+--- Resubstitution ---
+
+confMat =
+
+   203    85
+   163   701
+
+
+perc =
+
+   70.4861   29.5139
+   18.8657   81.1343
+
+
+--- KFold Cross Validation ---
+
+KFold Accuracies in perc:
+   93.0435   93.1034   92.2414   87.8261   92.1739   89.5652   94.7826   89.5652   93.9130   93.0435
+
+Standard Deviation of KFold Accuracies: 2.213827
+
+confMatK =
+
+   245    43
+    50   814
+
+
+percK =
+
+   85.0694   14.9306
+    5.7870   94.2130
+
+=*=*=*=*=*=*=*=*= Class 3 =*=*=*=*=*=*=*=*=
+
+--- Resubstitution ---
+
+confMat =
+
+   228    60
+   120   744
+
+
+perc =
+
+   79.1667   20.8333
+   13.8889   86.1111
+
+
+--- KFold Cross Validation ---
+
+KFold Accuracies in perc:
+   92.1739   90.5172   92.2414   90.4348   93.9130   92.1739   88.6957   91.3043   91.3043   95.6522
+
+Standard Deviation of KFold Accuracies: 1.926406
+
+confMatK =
+
+   244    44
+    50   814
+
+
+percK =
+
+   84.7222   15.2778
+    5.7870   94.2130
+
