@@ -2,6 +2,7 @@ clc;
 clear all;
 
 freqBands = [10, 15, 12];
+%[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
 [s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 fs = h.SampleRate;
@@ -30,6 +31,14 @@ stimCoordinate_flat = find(ismember(h.EVENT.TYP, stimCodes));
 classSignal = [];
 nonclassSignal = [];
 
+epochTime = 0.5;            % in seconds
+epochOverlap = 0.1;         % in seconds
+overlap_factor = (epochTime - epochOverlap) / epochTime;
+discardBuffer = (samplesTrain - (epochTime * fs)) / (epochOverlap * fs);
+
+data = [];
+label = [];
+
 % Band-pass filtering is the first thing which happens and it is done over
 % the complete signal and on all channels.
 for i = 1:numClasses                 % 3 classes
@@ -45,98 +54,78 @@ for i = 1:numClasses                 % 3 classes
         signal(:, j, i) = filter(B, A, signal(:, j, i));
     end
     
+    tempData = [];
     for j = 1:size(stimCoordinate_flat, 1)
+        feature = [];
         if ~ismember(stimCoordinate_flat(j), stimCoordinate(:, i+1))
-            nonclassSignal = [nonclassSignal; signal(h.EVENT.POS(stimCoordinate_flat(j)) + startOffset:h.EVENT.POS(stimCoordinate_flat(j)) + startOffset + samplesTrain - 1, :, i)];
+            % trial sample chunk
+            signalTrial = signal(h.EVENT.POS(stimCoordinate_flat(j)) + startOffset:h.EVENT.POS(stimCoordinate_flat(j)) + startOffset + samplesTrain - 1, :, i);
+            tempInner = [];
+            % epoching
+            for k = 1:numChannels
+                timeEpoch = buffer(signalTrial(:, k), epochTime * fs, ceil(overlap_factor * epochTime * fs));
+                timeEpoch = timeEpoch(:, size(timeEpoch, 2) - discardBuffer:end);
+                tempInner = [tempInner; log(1 + mean(timeEpoch .^ 2))];
+            end
+            feature = [feature; tempInner'];
+            
+            labelChunk = size(feature, 1);
+            label((j - 1) * labelChunk + 1:j * labelChunk, i) = 4;
+            % Using number 4 for non-class features.
         else
-            classSignal = [classSignal; signal(h.EVENT.POS(stimCoordinate_flat(j)) + startOffset:h.EVENT.POS(stimCoordinate_flat(j)) + startOffset + samplesTrain - 1, :, i)];
+            % trial sample chunk
+            signalTrial = signal(h.EVENT.POS(stimCoordinate_flat(j)) + startOffset:h.EVENT.POS(stimCoordinate_flat(j)) + startOffset + samplesTrain - 1, :, i);
+            tempInner = [];
+            % epoching
+            for k = 1:numChannels
+                timeEpoch = buffer(signalTrial(:, k), epochTime * fs, ceil(overlap_factor * epochTime * fs));
+                timeEpoch = timeEpoch(:, size(timeEpoch, 2) - discardBuffer:end);
+                tempInner = [tempInner; log(1 + mean(timeEpoch .^ 2))];
+            end
+            feature = [feature; tempInner'];
+            
+            labelChunk = size(feature, 1);
+            label((j - 1) * labelChunk + 1: j * labelChunk, i) = stimCodes(i + 1) - stimCodes(1);
         end
+        tempData = [tempData; feature];
     end
+    data(:, :, i) = tempData;
 end
 
-% classSignal is a 42000 * 6 matrix. Three 14000 * 6 matrices are
-% concatenated one after the other.
-% nonClass signal is a 126000 * 6 matrix. Three 42000 * 6 matrices are
-% concatenated one after the other.
-% The above dimensions are only true if the window is from 1 to 8 seconds.
+% data is 2112 x 6 x 3 for 1 to 8 second duration.
+% label is 2112 x 3
 
-epochTime = 0.5;            % in seconds
-epochOverlap = 0.1;         % in seconds
-overlap_factor = (epochTime - epochOverlap) / epochTime;
-
-% buffer introduces some zero padding in the beginning, which needs to be
-% discarded
-discardBuffer = (samplesTrain - (epochTime * fs)) / (epochOverlap * fs);
-
-feature = [];
-
-for k = 1:size(classSignal, 1) / numClasses:size(classSignal, 1)
-    for i = 1:size(stimCoordinate, 1)
-       tempInner = [];
-       for j = 1:numChannels
-            timeEpoch = buffer(classSignal((i - 1) * samplesTrain + k:i * samplesTrain + k - 1, j), epochTime * fs, ceil(overlap_factor * epochTime * fs));
-            timeEpoch = timeEpoch(:, size(timeEpoch, 2) - discardBuffer:end);
-            tempInner = [tempInner; log(1 + mean(timeEpoch .^ 2))];
-       end
-       feature = [feature; tempInner'];
-    end
-end
-
-unfeature = [];
-
-for k = 1:size(classSignal, 1) / numClasses:size(classSignal, 1)
-    for i = 1:numClasses * size(stimCoordinate, 1)
-       tempInner = [];
-       for j = 1:numChannels
-            timeEpoch = buffer(nonclassSignal((i - 1) * samplesTrain + k:i * samplesTrain + k - 1, j), epochTime * fs, ceil(overlap_factor * epochTime * fs));
-            timeEpoch = timeEpoch(:, size(timeEpoch, 2) - discardBuffer:end);
-            tempInner = [tempInner; log(1 + mean(timeEpoch .^ 2))];
-       end
-       unfeature = [unfeature; tempInner'];
-    end
-end
-
-% Divide feature and unfeature into 3 sets of class and non-class feature
-% vectors to train classifier.
-
-%transform into 3D.
-%feature_ = permute(reshape(feature', [size(feature, 2), size(feature, 1) / numClasses, numClasses]), [2, 1, 3]);
-%unfeature_ = permute(reshape(unfeature', [size(unfeature, 2), size(unfeature, 1) / numClasses, numClasses]), [2, 1, 3]);
-
-%data is concat of 'feature_' and 'unfeature_'. unfeature_ below feature_
-data = [permute(reshape(feature', [size(feature, 2), size(feature, 1) / numClasses, numClasses]), [2, 1, 3]); permute(reshape(unfeature', [size(unfeature, 2), size(unfeature, 1) / numClasses, numClasses]), [2, 1, 3]);];
-label(1:size(feature, 1)/numClasses) = 1;
-label(size(feature, 1)/numClasses + 1 : size(feature, 1)/numClasses + size(unfeature, 1)/numClasses) = 2;
-label = label';
-
-
-order = unique(label);
-
+order = [];
 
 for i = 1:numClasses
-    partObj = cvpartition(label, 'k', 10); %10-fold
-    f = @(xtr, ytr, xte, yte)confusionmat(yte, classify(xte, xtr, ytr), 'order', order);
-    
+    order(i, :) = unique(label(:, i));
+       
     fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
     fprintf('\n--- Resubstitution ---\n');
     
-    [predict, error] = classify(data(:, :, i), data(:, :, i), label);
-    confMat = confusionmat(label, predict)
+    %[w(:, :, i), b(:, :, i), predict(:, i)] = ldam(data(:, :, i), label(:, i));
+    [predict(:, i), error(:, i)] = classify(data(:, :, i), data(:, :, i), label(:, i));
+    confMat = confusionmat(label(:, i), predict(:, i))
     perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
-        
-    fprintf('\n--- KFold Cross Validation ---\n\n');
-    confMatKi = crossval(f, data, label, 'partition', partObj); % each row can be transformed into a confusionmatrix by using reshape
-    
-    for j = 1:size(confMatKi, 1)
-        tempMat = reshape(confMatKi(j, :), 2, 2);
-        accK(j) = 100* sum(diag(tempMat)) / sum(sum(tempMat)); % sum of diagonal / total
-    end
-    
-    fprintf('KFold Accuracies in perc:\n');
-    disp(accK)
-    sigmaAccK = sqrt(var(accK));
-    fprintf('Standard Deviation of KFold Accuracies: %f\n', sigmaAccK);
-            
-    confMatK = reshape(sum(confMatKi), 2, 2)
-    percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
 end
+
+%finalDecision = sum(~ismember(predict, 4) .* predict, 2);
+idealDecision = sum(~ismember(label, 4) .* label, 2);
+
+for i = 1:length(idealDecision)
+    if sum(predict(i, :) == 4) == 2
+        for j = 1:size(predict, 2)
+            if predict(i, j) ~= 4
+                finalDecision(i) = predict(i, j);
+            end
+        end
+    else
+        finalDecision(i) = 0;
+    end
+end
+finalDecision = finalDecision';
+
+i = 1:length(idealDecision);
+correctDecisions = sum((finalDecision(i) == idealDecision(i)) == 1);
+
+fprintf('\t--------\n\n\t%d correct decisions out of %d.\n', correctDecisions, length(idealDecision));
