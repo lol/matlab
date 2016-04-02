@@ -5,16 +5,20 @@ freqBands = [10, 15, 12];
 %[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
 [s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-record-train-prithvi-1-[2016.04.01-13.16.54].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-record-gagan-[2016.04.01-23.12.08].gdf', 0, 'OVERFLOWDETECTION:OFF');
 fs = h.SampleRate;
 numChannels = h.NS;
+%numChannels = 2;
 s = s(:, 1:numChannels); % selection of channels
+%s = s(:, [2, 3]);
 
 stimCodes = [33024, 33025, 33026, 33027];
 numClasses = size(stimCodes, 2) - 1;
 
 % Samples considered for training. From 1.000 to 7.999 sec.
-flickerStart = 1;   % default = 1
-flickerEnd = 8;     % could also be called last offset
+flickerStart = 4;   % default = 1
+flickerEnd = 7;     % could also be called last offset
 samplesTrain = (flickerEnd - flickerStart) * fs; % 1750 samples @ fs = 250 Hz
 startOffset = flickerStart * fs;
 
@@ -127,5 +131,15 @@ finalDecision = finalDecision';
 
 i = 1:length(idealDecision);
 correctDecisions = sum((finalDecision(i) == idealDecision(i)) == 1);
-
 fprintf('\t--------\n\n\t%d correct decisions out of %d.\n', correctDecisions, length(idealDecision));
+
+finalDecision(finalDecision == 0) = 4;
+idealDecision(idealDecision == 0) = 4;
+for i = 1:numClasses + 1
+    tempIndice = find(ismember(idealDecision, i));
+    x = idealDecision(tempIndice);
+    y = finalDecision(tempIndice);
+    j = 1:length(x);
+    correctDecisions = sum((x(j) == y(j)) == 1);
+    fprintf('\t\n\n\tFor Class %d:\t%d correct decisions out of %d.\n', i, correctDecisions, length(x));
+end
