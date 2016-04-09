@@ -1,0 +1,102 @@
+=*=*=*=*=*=*=*=*= Class 1 =*=*=*=*=*=*=*=*=
+
+--- Resubstitution ---
+
+confMat =
+
+         219         309
+          77        1507
+
+
+perc =
+
+   41.4773   58.5227
+    4.8611   95.1389
+
+
+--- KFold Crossvalidation ---
+
+confMatK =
+
+         217         311
+          79        1505
+
+KFold Accuracies %: 
+   78.3019   80.1887   83.8863   86.2559   81.4286   84.3602   82.5472   79.6209   81.9905   76.7773
+
+Sigma: 
+    2.8984
+
+=*=*=*=*=*=*=*=*= Class 2 =*=*=*=*=*=*=*=*=
+
+--- Resubstitution ---
+
+confMat =
+
+         318         210
+           0        1584
+
+
+perc =
+
+   60.2273   39.7727
+         0  100.0000
+
+
+--- KFold Crossvalidation ---
+
+confMatK =
+
+         317         211
+           0        1584
+
+KFold Accuracies %: 
+   86.3208   89.1509   89.5238   90.5213   89.6226   91.9431   91.9811   91.4692   92.3810   87.2038
+
+Sigma: 
+    2.0614
+
+=*=*=*=*=*=*=*=*= Class 3 =*=*=*=*=*=*=*=*=
+
+--- Resubstitution ---
+
+confMat =
+
+         300         228
+           2        1582
+
+
+perc =
+
+   56.8182   43.1818
+    0.1263   99.8737
+
+
+--- KFold Crossvalidation ---
+
+confMatK =
+
+         300         228
+           2        1582
+
+KFold Accuracies %: 
+   90.5660   87.6190   91.9048   86.7925   89.5735   90.9953   86.2559   89.6226   89.6226   88.1517
+
+Sigma: 
+    1.8524
+
+	--------
+
+	1301 correct decisions out of 2112.
+	
+
+	For Class 1:	41.477273 percent.
+	
+
+	For Class 2:	55.871212 percent.
+	
+
+	For Class 3:	53.219697 percent.
+	
+
+	For Class 4:	95.833333 percent.
