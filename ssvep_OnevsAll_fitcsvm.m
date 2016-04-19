@@ -151,4 +151,4 @@ kfinalDecision = kfinalDecision';
 kfinalDecision(kfinalDecision == 0) = 4;
 
 confMatK = confusionmat(idealDecision, kfinalDecision)
-percK = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
+percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
