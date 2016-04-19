@@ -4,6 +4,7 @@ clear all;
 freqBands = [10, 15, 12];
 %[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
 [s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF'); % samit
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-train-prithvi-1-[2016.04.01-13.16.54].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-gagan-[2016.04.01-23.12.08].gdf', 0, 'OVERFLOWDETECTION:OFF');
@@ -103,7 +104,7 @@ order = [];
 
 fprintf('\n--- Resubstitution ---\n');
 for i = 1:numClasses
-    svmmodel = fitcsvm(data(:, :, i), label(:, i));
+    svmmodel = fitcsvm(data(:, :, i), label(:, i), 'KernelFunction','RBF','KernelScale', 'auto');
     predict(:, i) = resubPredict(svmmodel);
 end
 
@@ -131,7 +132,7 @@ perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
 
 fprintf('\n--- KFold Crossvalidation ---\n');
 for i = 1:numClasses
-    ksvmmodel = fitcsvm(data(:, :, i), label(:, i), 'KFold', 10);
+    ksvmmodel = fitcsvm(data(:, :, i), label(:, i), 'KFold', 10, 'KernelFunction', 'RBF', 'KernelScale', 'auto');
     kpredict(:, i) = kfoldPredict(ksvmmodel);
 end
 
