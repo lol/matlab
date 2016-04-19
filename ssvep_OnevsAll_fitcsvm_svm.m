@@ -101,26 +101,12 @@ end
 
 order = [];
 
+fprintf('\n--- Resubstitution ---\n');
 for i = 1:numClasses
-    order(i, :) = unique(label(:, i));
-       
-    fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
-    fprintf('\n--- Resubstitution ---\n');
-    
     svmmodel = fitcsvm(data(:, :, i), label(:, i));
     predict(:, i) = resubPredict(svmmodel);
-    confMat = confusionmat(label(:, i), predict(:, i))
-    perc = bsxfun(@rdivide, confMat, sum(confMat, 2)) * 100
-    
-    confMatK = zeros(size(confMat));
-    fprintf('\n--- KFold Crossvalidation ---\n');
-    ksvmmodel = fitcsvm(data(:, :, i), label(:, i), 'KFold', 10);
-    kpredict(:, i) = kfoldPredict(ksvmmodel);
-    confMatK = confusionmat(label(:, i), kpredict(:, i))
-    perc = bsxfun(@rdivide, confMat, sum(confMatK, 2)) * 100
 end
 
-%finalDecision = sum(~ismember(predict, 4) .* predict, 2);
 idealDecision = sum(~ismember(label, 4) .* label, 2);
 
 for i = 1:length(idealDecision)
@@ -136,18 +122,33 @@ for i = 1:length(idealDecision)
 end
 finalDecision = finalDecision';
 
-i = 1:length(idealDecision);
-correctDecisions = sum((finalDecision(i) == idealDecision(i)) == 1);
-fprintf('\t--------\n\n\t%d correct decisions out of %d.\n', correctDecisions, length(idealDecision));
-
 finalDecision(finalDecision == 0) = 4;
 idealDecision(idealDecision == 0) = 4;
-for i = 1:numClasses + 1
-    tempIndice = find(ismember(idealDecision, i));
-    x = idealDecision(tempIndice);
-    y = finalDecision(tempIndice);
-    j = 1:length(x);
-    correctDecisions = sum((x(j) == y(j)) == 1);
-    %fprintf('\t\n\n\tFor Class %d:\t%d correct decisions out of %d. %f percent.\n', i, correctDecisions, length(x), 100 * correctDecisions / length(x));
-    fprintf('\t\n\n\tFor Class %d:\t%f percent.\n', i, 100 * correctDecisions / length(x));
+
+confMat = confusionmat(idealDecision, finalDecision)
+perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
+
+
+fprintf('\n--- KFold Crossvalidation ---\n');
+for i = 1:numClasses
+    ksvmmodel = fitcsvm(data(:, :, i), label(:, i), 'KFold', 10);
+    kpredict(:, i) = kfoldPredict(ksvmmodel);
 end
+
+for i = 1:length(idealDecision)
+    if sum(kpredict(i, :) == 4) == 2
+        for j = 1:size(kpredict, 2)
+            if predict(i, j) ~= 4
+                kfinalDecision(i) = kpredict(i, j);
+            end
+        end
+    else
+        kfinalDecision(i) = 0;
+    end
+end
+kfinalDecision = kfinalDecision';
+
+kfinalDecision(kfinalDecision == 0) = 4;
+
+confMatK = confusionmat(idealDecision, kfinalDecision)
+percK = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
