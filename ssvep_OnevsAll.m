@@ -3,7 +3,8 @@ clear all;
 
 freqBands = [10, 15, 12];
 %[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
-[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
+[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF'); % samit
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-train-prithvi-1-[2016.04.01-13.16.54].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-gagan-[2016.04.01-23.12.08].gdf', 0, 'OVERFLOWDETECTION:OFF');
@@ -101,34 +102,13 @@ end
 
 order = [];
 
+fprintf('\n--- Resubstitution ---\n');
 for i = 1:numClasses
     order(i, :) = unique(label(:, i));
-       
-    fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
-    fprintf('\n--- Resubstitution ---\n');
-    
+  
     %[w(:, :, i), b(:, :, i), predict(:, i)] = ldam2(data(:, :, i), label(:, i));
     [w(:, :, i), b(:, :, i), predict(:, i)] = ldam(data(:, :, i), data(:, :, i), label(:, i));
     %[predict(:, i), error(:, i)] = classify(data(:, :, i), data(:, :, i), label(:, i));
-    confMat = confusionmat(label(:, i), predict(:, i))
-    perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
-    
-    confMatK = zeros(size(confMat));
-    fprintf('\n--- KFold Crossvalidation ---\n');
-    indices = crossvalind('Kfold', label(:, 1), 10);    %10 fold
-    for j = 1:10
-        test = (indices == j);
-        train = ~test;
-        [kw, kb, kpredict] = ldam(data(test, :, i), data(train, :, i), label(train, i));
-        confMatKj = confusionmat(label(test, i), kpredict);
-        accK(j) = 100 * sum(diag(confMatKj)) / sum(sum(confMatKj));
-        confMatK = confMatK + confMatKj;
-    end
-    confMatK
-    disp('KFold Accuracies %: ');
-    disp(accK);
-    disp('Sigma: ');
-    disp(sqrt(var(accK)));
 end
 
 %finalDecision = sum(~ismember(predict, 4) .* predict, 2);
@@ -147,18 +127,49 @@ for i = 1:length(idealDecision)
 end
 finalDecision = finalDecision';
 
-i = 1:length(idealDecision);
-correctDecisions = sum((finalDecision(i) == idealDecision(i)) == 1);
-fprintf('\t--------\n\n\t%d correct decisions out of %d.\n', correctDecisions, length(idealDecision));
-
 finalDecision(finalDecision == 0) = 4;
 idealDecision(idealDecision == 0) = 4;
-for i = 1:numClasses + 1
-    tempIndice = find(ismember(idealDecision, i));
-    x = idealDecision(tempIndice);
-    y = finalDecision(tempIndice);
-    j = 1:length(x);
-    correctDecisions = sum((x(j) == y(j)) == 1);
-    %fprintf('\t\n\n\tFor Class %d:\t%d correct decisions out of %d. %f percent.\n', i, correctDecisions, length(x), 100 * correctDecisions / length(x));
-    fprintf('\t\n\n\tFor Class %d:\t%f percent.\n', i, 100 * correctDecisions / length(x));
+
+confMat = confusionmat(idealDecision, finalDecision)
+perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
+
+
+confMatK = zeros(size(confMat));
+fprintf('\n--- KFold Crossvalidation ---\n');
+indices = crossvalind('Kfold', label(:, 1), 10);    %10 fold
+for j = 1:10
+    test = (indices == j);
+    train = ~test;
+    kidealDecision = idealDecision(test);
+    
+    for i = 1:numClasses
+        order(i, :) = unique(label(:, i));
+       
+        %[w(:, :, i), b(:, :, i), predict(:, i)] = ldam2(data(:, :, i), label(:, i));
+        [kw(:, :, i), kb(:, :, i), kpredict(:, i)] = ldam(data(test, :, i), data(train, :, i), label(train, i));
+        %[kpredict(:, i), kerror(:, i)] = classify(data(test, :, i), data(train, :, i), label(train, i));
+    end
+    
+    for k = 1:length(kidealDecision)
+        if sum(kpredict(k, :) == 4) == 2
+            for l = 1:size(predict, 2)
+                if kpredict(k, l) ~= 4
+                    kfinalDecision(k) = kpredict(k, l);
+                end
+            end
+        else
+            kfinalDecision(k) = 0;
+        end
+    end
+    
+    kfinalDecision = kfinalDecision';
+    kfinalDecision(kfinalDecision == 0) = 4;
+    kidealDecision(kidealDecision == 0) = 4;
+    
+    confMatKj = confusionmat(kidealDecision, kfinalDecision);
+    confMatK = confMatK + confMatKj;
+    
+    kb = []; kw = []; kpredict = []; kfinalDecision = [];
 end
+confMatK
+perc = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
