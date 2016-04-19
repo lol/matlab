@@ -169,7 +169,7 @@ for j = 1:10
     confMatKj = confusionmat(kidealDecision, kfinalDecision);
     confMatK = confMatK + confMatKj;
     
-    kb = []; kw = []; kpredict = []; kfinalDecision = [];
+    kb = []; kw = []; kpredict = []; kfinalDecision = []; % to avoid dimension mismatch in the non-equal partition
 end
 confMatK
 perc = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
