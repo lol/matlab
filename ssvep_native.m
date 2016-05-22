@@ -1,9 +1,11 @@
-clc;
-clear all;
+function [ confMat, confMatK, accK ] = ssvep_native( gdffile )
 
 freqBands = [10, 15, 12];
+[s, h] = sload(gdffile, 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
-[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF'); % samit
+%[s, h] = sload('ssvep-record-train-indra-3-[2016.03.31-23.42.46].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-train-prithvi-1-[2016.04.01-13.16.54].gdf', 0, 'OVERFLOWDETECTION:OFF');
 fs = h.SampleRate;
@@ -124,27 +126,30 @@ end
 order = [];
 
 %fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
-fprintf('\n--- Resubstitution ---\n');
+%fprintf('\n--- Resubstitution ---\n');
     
 [w, b, predict] = ldam(concatData, concatData, concatLabel);
 %[predict, error)] = classify(concatData, data(:, :, i), label(:, i));
-confMat = confusionmat(concatLabel, predict)
-perc = bsxfun(@rdivide, confMat, sum(confMat, 2)) * 100
+confMat = confusionmat(concatLabel, predict);
+%perc = bsxfun(@rdivide, confMat, sum(confMat, 2)) * 100
 
-fprintf('\n--- KFold Crossvalidation ---\n');
+%fprintf('\n--- KFold Crossvalidation ---\n');
 confMatK = zeros(size(confMat));
 indices = crossvalind('Kfold', label(:, 1), 10);    %10 fold
 for j = 1:10
-        test = (indices == j);
-        train = ~test;
-        [kw, kb, kpredict] = ldam(concatData(test, :), concatData(train, :), concatLabel(train));
-        confMatKj = confusionmat(concatLabel(test), kpredict);
-        accK(j) = 100 * sum(diag(confMatKj)) / sum(sum(confMatKj));
-        confMatK = confMatK + confMatKj;
+    test = (indices == j);
+    train = ~test;
+    [kw, kb, kpredict] = ldam(concatData(test, :), concatData(train, :), concatLabel(train));
+    confMatKj = confusionmat(concatLabel(test), kpredict);
+    accK(j) = 100 * sum(diag(confMatKj)) / sum(sum(confMatKj));
+    confMatK = confMatK + confMatKj;
 end
-confMatK
-percK = bsxfun(@rdivide, confMatK, sum(confMatK, 2)) * 100
-disp('KFold Accuracies %: ');
-disp(accK);
-disp('Sigma: ');
-disp(sqrt(var(accK)));
+%confMatK
+%percK = bsxfun(@rdivide, confMatK, sum(confMatK, 2)) * 100
+%disp('KFold Accuracies %: ');
+%disp(accK);
+%disp('Median: ');
+%disp(median(accK));
+%disp('Sigma: ');
+%disp(sqrt(var(accK)));
+end

@@ -1,10 +1,11 @@
-clc;
-clear all;
+function [ confMat, confMatK, accK ] = ssvep_OnevsAll_libsvm( gdffile )
 
 freqBands = [10, 15, 12];
+[s, h] = sload(gdffile, 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
-[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF'); % samit
+%[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF'); % samit
+%[s, h] = sload('ssvep-record-train-indra-3-[2016.03.31-23.42.46].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-train-prithvi-1-[2016.04.01-13.16.54].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-gagan-[2016.04.01-23.12.08].gdf', 0, 'OVERFLOWDETECTION:OFF');
@@ -100,13 +101,10 @@ end
 % data is 2112 x 6 x 3 for 1 to 8 second duration.
 % label is 2112 x 3
 
-order = [];
-
-fprintf('\n--- Resubstitution ---\n');
-for i = 1:numClasses
-    order(i, :) = unique(label(:, i));
-    
-    model = svmtrain(label(:, i), data(:, :, i), '-s 0 -t 2 -q');
+%fprintf('\n--- Resubstitution ---\n');
+for i = 1:numClasses    
+    %model = svmtrain(label(:, i), data(:, :, i), '-s 0 -t 2 -q');
+    model = svmtrain(label(:, i), data(:, :, i), '-s 0 -t 2 -c 10 -g 10 -q');
     predict(:, i) = svmpredict(label(:, i), data(:, :, i), model, '-q');
 end
 
@@ -128,11 +126,11 @@ finalDecision = finalDecision';
 finalDecision(finalDecision == 0) = 4;
 idealDecision(idealDecision == 0) = 4;
 
-confMat = confusionmat(idealDecision, finalDecision)
-perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
+confMat = confusionmat(idealDecision, finalDecision);
+%perc = bsxfun(@rdivide, confMat, sum(confMat,2)) * 100
 
 confMatK = zeros(size(confMat));
-fprintf('\n--- KFold Crossvalidation ---\n');
+%fprintf('\n--- KFold Crossvalidation ---\n');
 indices = crossvalind('Kfold', label(:, 1), 10);    %10 fold
 for j = 1:10
     test = (indices == j);
@@ -140,7 +138,8 @@ for j = 1:10
     kidealDecision = idealDecision(test);
     
     for i = 1:numClasses
-        kmodel = svmtrain(label(train, i), data(train, :, i), '-s 0 -t 2 -q');
+        %kmodel = svmtrain(label(train, i), data(train, :, i), '-s 0 -t 2 -q');
+        kmodel = svmtrain(label(train, i), data(train, :, i), '-s 0 -t 2 -c 10 -g 10 -q');
         kpredict(:, i) = svmpredict(label(test, i), data(test, :, i), kmodel, '-q');
     end
     
@@ -161,9 +160,11 @@ for j = 1:10
     kidealDecision(kidealDecision == 0) = 4;
     
     confMatKj = confusionmat(kidealDecision, kfinalDecision);
+    accK(j) = 100 * sum(diag(confMatKj)) / sum(sum(confMatKj));
     confMatK = confMatK + confMatKj;
     
     kb = []; kw = []; kpredict = []; kfinalDecision = []; % to avoid dimension mismatch in the non-equal partition
 end
-confMatK
-percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
+%confMatK
+%percK = bsxfun(@rdivide, confMatK, sum(confMatK,2)) * 100
+end

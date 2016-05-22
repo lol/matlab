@@ -1,10 +1,10 @@
-clc;
-clear all;
+function [ confMat, confMatK, accK ] = ssvep_native_libsvm( gdffile )
 
 freqBands = [10, 15, 12];
+[s, h] = sload(gdffile, 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-arjun-[2016.02.11-14.35.48].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-shiva-[2016.01.31-20.34.25].gdf', 0, 'OVERFLOWDETECTION:OFF');
-[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF');
+%[s, h] = sload('ssvep-record-train-[2016.04.09-10.38.44].gdf', 0, 'OVERFLOWDETECTION:OFF'); %i
 %[s, h] = sload('ssvep-record-train-indra-3-[2016.03.31-23.42.46].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-training-samit-[2016.02.09-15.55.56].gdf', 0, 'OVERFLOWDETECTION:OFF');
 %[s, h] = sload('ssvep-record-train-prithvi-1-[2016.04.01-13.16.54].gdf', 0, 'OVERFLOWDETECTION:OFF');
@@ -123,27 +123,28 @@ for i = 1:numClasses + 1
     concatLabel(size(concatLabel, 2) + 1 : size(concatLabel, 2) + labelChunk) = i;
 end    
 
-order = [];
-
 %fprintf('=*=*=*=*=*=*=*=*= Class %d =*=*=*=*=*=*=*=*=\n', i);
-fprintf('\n--- Resubstitution ---\n');
+%fprintf('\n--- Resubstitution ---\n');
 
-model = svmtrain(concatLabel', concatData, '-s 0 -t 2 -q');
+%model = svmtrain(concatLabel', concatData, '-s 0 -t 2 -q');
+model = svmtrain(concatLabel', concatData, '-s 0 -t 2 -c 10 -g 0.5 -q');
 predict = svmpredict(concatLabel', concatData, model, '-q');
-confMat = confusionmat(concatLabel, predict)
-perc = bsxfun(@rdivide, confMat, sum(confMat, 2)) * 100
+confMat = confusionmat(concatLabel, predict);
+%perc = bsxfun(@rdivide, confMat, sum(confMat, 2)) * 100
 
-fprintf('\n--- KFold Crossvalidation ---\n');
+%fprintf('\n--- KFold Crossvalidation ---\n');
 confMatK = zeros(size(confMat));
 indices = crossvalind('Kfold', label(:, 1), 10);    %10 fold
 for j = 1:10
     test = (indices == j);
     train = ~test;
-    kmodel = svmtrain(concatLabel(train)', concatData(train, :), '-s 0 -t 2 -q');
+    %kmodel = svmtrain(concatLabel(train)', concatData(train, :), '-s 0 -t 2 -q');
+    kmodel = svmtrain(concatLabel(train)', concatData(train, :), '-s 0 -t 2 -c 10 -g 1 -q');
     kpredict = svmpredict(concatLabel(test)', concatData(test, :), kmodel, '-q');
     confMatKj = confusionmat(concatLabel(test), kpredict);
     accK(j) = 100 * sum(diag(confMatKj)) / sum(sum(confMatKj));
     confMatK = confMatK + confMatKj;
 end
-confMatK
-percK = bsxfun(@rdivide, confMatK, sum(confMatK, 2)) * 100
+%confMatK
+%percK = bsxfun(@rdivide, confMatK, sum(confMatK, 2)) * 100
+end
